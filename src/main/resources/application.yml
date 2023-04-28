@@ -1,0 +1,17 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    defer-datasource-initialization: true
+
+  datasource:
+    url: jdbc:mysql://localhost/multiwork?zeroDateTimeBehavior=CONVERT_TO_NULL&serverTimezone=UTC
+    username: admin
+    password: padmin
+
+  sql:
+    init:
+      mode: always
+
+crossOrigin: http://localhost:4200
