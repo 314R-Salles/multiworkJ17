@@ -1,0 +1,25 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    defer-datasource-initialization: true
+
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/multiwork?zeroDateTimeBehavior=CONVERT_TO_NULL&serverTimezone=UTC
+    username: ${usernameDB}
+    password: ${passwordDB}
+
+  sql:
+    init:
+      mode: always
+
+crossOrigin: https://psalles.ovh, https://www.psalles.ovh
+
+server:
+  ssl:
+    enabled: true
+    key-store: /etc/letsencrypt/live/psalles.ovh/keystore.p12
+    key-store-password: psalles
+    keyStoreType: PKCS12
+    keyAlias: tomcat
