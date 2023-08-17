@@ -2,12 +2,12 @@ package com.psalles.multiworkJ17.krosmaga;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +15,7 @@ import java.util.Objects;
 
 @Entity
 @Data
-@Table(name = "KM_Room")
+@Table(name = "km_room")
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder

@@ -1,18 +1,17 @@
 package com.psalles.multiworkJ17.krosmaga;
 
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.*;
 import java.util.Objects;
 
 @Entity
 @Data
-@Table(name = "KM_Player")
+@Table(name = "km_player")
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -23,6 +22,7 @@ public class Player {
     private Long bddId;
 
     @ManyToOne
+    @JoinColumn(name="roomId")
     private Room roomId;
 
     @Column
