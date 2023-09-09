@@ -107,8 +107,37 @@ public class KMController {
             // les bans ne sont pas validés des 2 cotés, on affiche les dieux + le ban du joueur qui fait l'appel.
             return mapRoomWithoutBans(room, playerId);
         } else {
-            // on a toutes les infos, tout le monde charge tout.  (Meme les uuids ?)
+            // on a toutes les infos, tout le monde charge tout.
             return mapRoomWithBans(room, playerId);
+        }
+    }
+
+    @GetMapping("meta/{roomId}")
+    public RoomDto getRoomForCrawlers(@PathVariable String roomId) {
+
+        Room room = roomRepository.findById(roomId).orElseThrow(() -> new ResourceNotFoundException("Room introuvable"));
+        List<Player> players = room.getPlayer();
+
+        int registeredPlayers = players.size();
+        boolean onlyOnePlayer = registeredPlayers == 1;
+        boolean allPlayersRegistered = registeredPlayers == 2;
+
+        boolean picksDone = allPlayersRegistered && players.get(0).getD1() != null && players.get(1).getD1() != null;
+        boolean bansDone = allPlayersRegistered && players.get(0).getBan() != null && players.get(1).getBan() != null;
+
+        // pas encore fait les picks
+        if (!picksDone) {
+            if (onlyOnePlayer) {
+                Player newPlayer = Player.builder().name("Joueur 2").build();
+                room.getPlayer().add(newPlayer);
+                return mapPartialRoom(room, null);
+            } else {
+                return mapToSpecRoom(room);
+            }
+        } else if (!bansDone) {
+            return mapRoomWithoutBans(room, null);
+        } else {
+            return mapRoomWithBans(room, null);
         }
     }
 
@@ -261,8 +290,6 @@ public class KMController {
         List<Playerdto> playersDto = room.getPlayer().stream()
                 .map(player -> {
                     Playerdto.PlayerdtoBuilder builder = Playerdto.builder()
-                            .bddId(player.getBddId())
-//                            .uuid(player.getUuid())
                             .name(player.getName());
                     return builder.build();
                 }).collect(Collectors.toList());
