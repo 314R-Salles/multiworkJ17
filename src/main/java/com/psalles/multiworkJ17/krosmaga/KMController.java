@@ -6,10 +6,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,20 +21,24 @@ import static java.util.Collections.singletonList;
 
 @RestController
 @RequestMapping("/km")
+@Slf4j
 public class KMController {
 
     final GenericMapper mapper;
     final RoomRepository roomRepository;
     final PlayerRepository playerRepository;
+    final PythonService pythonService;
 
     @Autowired
     public KMController(GenericMapper mapper,
                         RoomRepository roomRepository,
-                        PlayerRepository playerRepository
+                        PlayerRepository playerRepository,
+                        PythonService pythonService
     ) {
         this.mapper = mapper;
         this.roomRepository = roomRepository;
         this.playerRepository = playerRepository;
+        this.pythonService = pythonService;
     }
 
 
@@ -168,6 +175,29 @@ public class KMController {
         player.setName(request.getName());
         playerRepository.save(player);
         roomRepository.save(room);
+
+        if (room.getPlayer().stream().noneMatch(p -> p.getBan() == null)) {
+            Player player1 = room.getPlayer().get(0);
+            Player player2 = room.getPlayer().get(1);
+
+            List<Integer> g1 = new ArrayList<>(Arrays.asList(player1.getD1(), player1.getD2(), player1.getD3()));
+            List<Integer> g1bis = Arrays.asList(player1.getD1(), player1.getD2(), player1.getD3());
+            g1.remove(player2.getBan().intValue());
+            g1.add(g1bis.get(player2.getBan()));
+
+            List<Integer> g2 = new ArrayList<>(Arrays.asList(player2.getD1(), player2.getD2(), player2.getD3()));
+            List<Integer> g2bis = Arrays.asList(player2.getD1(), player2.getD2(), player2.getD3());
+            g2.remove(player1.getBan().intValue());
+            g2.add(g2bis.get(player1.getBan()));
+
+            pythonService.runPython(
+                    player1.getName(), g1.get(0).toString(), g1.get(1).toString(), g1.get(2).toString(),
+                    player2.getName(), g2.get(0).toString(), g2.get(1).toString(), g2.get(2).toString(),
+                    "/var/www/dist/kmpick/browser/assets/" + room.getRoom() + ".png"
+            );
+        }
+
+
         return getRoom(playerId, request.getRoomId());
     }
 
@@ -267,7 +297,7 @@ public class KMController {
                     Playerdto.PlayerdtoBuilder builder = Playerdto.builder()
                             .bddId(player.getBddId())
                             .name(player.getName());
-                    if (player.getUuid().equals(playerId)) {
+                    if (player.getUuid() != null && player.getUuid().equals(playerId)) {
                         builder.uuid(player.getUuid())
                                 .d1(player.getD1())
                                 .d2(player.getD2())
