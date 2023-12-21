@@ -1,5 +1,6 @@
 package com.psalles.multiworkJ17.krosmaga;
 
+import com.psalles.multiworkJ17.commons.client.BaseHttpClient;
 import com.psalles.multiworkJ17.exceptions.ResourceNotFoundException;
 import com.psalles.multiworkJ17.mappers.GenericMapper;
 import lombok.AllArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -28,17 +30,26 @@ public class KMController {
     final RoomRepository roomRepository;
     final PlayerRepository playerRepository;
     final PythonService pythonService;
+    final SimpMessageSendingOperations messagingTemplate;
+    final BaseHttpClient httpClient;
+    final KMService kmService;
 
     @Autowired
     public KMController(GenericMapper mapper,
                         RoomRepository roomRepository,
                         PlayerRepository playerRepository,
-                        PythonService pythonService
+                        PythonService pythonService,
+                        SimpMessageSendingOperations messagingTemplate,
+                        KMService kmService,
+                        BaseHttpClient httpClient
     ) {
         this.mapper = mapper;
         this.roomRepository = roomRepository;
         this.playerRepository = playerRepository;
         this.pythonService = pythonService;
+        this.messagingTemplate = messagingTemplate;
+        this.kmService = kmService;
+        this.httpClient = httpClient;
     }
 
 
@@ -63,7 +74,7 @@ public class KMController {
     public String generate(@RequestHeader("km_token") String playerId, @PathVariable String roomId) {
         Room room = Room.builder().room(roomId).lastUpdated(LocalDateTime.now()).build();
         roomRepository.save(room);
-        Player player = Player.builder().roomId(room).name(getName(playerId, "Joueur 1")).uuid(playerId).build();
+        Player player = Player.builder().roomId(room).validUsername(false).name(getName(playerId, "Joueur 1")).uuid(playerId).build();
         playerRepository.save(player);
         room.setPlayer(singletonList(player));
         roomRepository.save(room);
@@ -96,8 +107,7 @@ public class KMController {
                 // le joueur ne fait pas partie de la room
                 if (onlyOnePlayer) {
                     // on avait qu'un joueur, donc on enregistre ce nouveau joueur
-                    Optional<Player> p = playerRepository.findByUuidOrderByLastUpdated(playerId);
-                    Player newPlayer = Player.builder().roomId(room).name(getName(playerId, "Joueur 2")).uuid(playerId).build();
+                    Player newPlayer = Player.builder().roomId(room).validUsername(false).name(getName(playerId, "Joueur 2")).uuid(playerId).build();
                     playerRepository.save(newPlayer);
                     room.getPlayer().add(newPlayer);
                     roomRepository.save(room); // ligne inutile? pareil la suivante? // Non il faut mettre à jour le lastUpdated au passage.
@@ -149,12 +159,13 @@ public class KMController {
     }
 
 
-    //        // le joueur pick ses dieux
+    // le joueur pick ses dieux
     @PostMapping("/gods")
-    public RoomDto pickGods(@RequestHeader("km_token") String playerId, @RequestBody PickGodRequest request) {
+    public void pickGods(@RequestHeader("km_token") String playerId, @RequestBody PickGodRequest request) {
         Room room = roomRepository.findById(request.getRoomId()).get();
         room.setLastUpdated(LocalDateTime.now());
         Player player = room.getPlayer().stream().filter(p -> p.getUuid().equals(playerId)).findFirst().get();
+        Player player2 = room.getPlayer().stream().filter(p -> !p.getUuid().equals(playerId)).findFirst().get();
         player.setD1(request.getPicks().get(0));
         player.setD2(request.getPicks().get(1));
         player.setD3(request.getPicks().get(2));
@@ -162,54 +173,83 @@ public class KMController {
         playerRepository.save(player);
         roomRepository.save(room);
 
-        return getRoom(playerId, request.getRoomId());
+        RoomDto result = getRoom(playerId, request.getRoomId());
+        RoomDto result2 = getRoom(player2.getUuid(), request.getRoomId());
+
+        if (room.getPlayer().stream().anyMatch(p -> p.getD3() == null)) {
+            this.messagingTemplate.convertAndSend("/topic/progress/" + room.getRoom() + "/" + playerId, result);
+        } else {
+            this.messagingTemplate.convertAndSend("/topic/progress/" + room.getRoom() + "/" + playerId, result);
+            this.messagingTemplate.convertAndSend("/topic/progress/" + room.getRoom() + "/" + player2.getUuid(), result2);
+        }
     }
 
-    //        // le joueur pick ses dieux
+    // le joueur pick ses dieux
     @PostMapping("/ban")
-    public RoomDto pickGods(@RequestHeader("km_token") String playerId, @RequestBody BanGodRequest request) {
+    public void banGods(@RequestHeader("km_token") String playerId, @RequestBody BanGodRequest request) {
         Room room = roomRepository.findById(request.getRoomId()).get();
         room.setLastUpdated(LocalDateTime.now());
         Player player = room.getPlayer().stream().filter(p -> p.getUuid().equals(playerId)).findFirst().get();
+        Player player2 = room.getPlayer().stream().filter(p -> !p.getUuid().equals(playerId)).findFirst().get();
         player.setBan(request.getBan());
         player.setName(request.getName());
         playerRepository.save(player);
         roomRepository.save(room);
 
+
+        RoomDto result = getRoom(playerId, request.getRoomId());
+        RoomDto result2 = getRoom(player2.getUuid(), request.getRoomId());
+
         if (room.getPlayer().stream().noneMatch(p -> p.getBan() == null)) {
-            Player player1 = room.getPlayer().get(0);
-            Player player2 = room.getPlayer().get(1);
+            this.messagingTemplate.convertAndSend("/topic/progress/" + room.getRoom() + "/" + playerId, result);
+            this.messagingTemplate.convertAndSend("/topic/progress/" + room.getRoom() + "/" + player2.getUuid(), result2);
 
-            List<Integer> g1 = new ArrayList<>(Arrays.asList(player1.getD1(), player1.getD2(), player1.getD3()));
-            List<Integer> g1bis = Arrays.asList(player1.getD1(), player1.getD2(), player1.getD3());
-            g1.remove(player2.getBan().intValue());
-            g1.add(g1bis.get(player2.getBan()));
-
-            List<Integer> g2 = new ArrayList<>(Arrays.asList(player2.getD1(), player2.getD2(), player2.getD3()));
-            List<Integer> g2bis = Arrays.asList(player2.getD1(), player2.getD2(), player2.getD3());
-            g2.remove(player1.getBan().intValue());
-            g2.add(g2bis.get(player1.getBan()));
-
-            pythonService.runPython(
-                    player1.getName(), g1.get(0).toString(), g1.get(1).toString(), g1.get(2).toString(),
-                    player2.getName(), g2.get(0).toString(), g2.get(1).toString(), g2.get(2).toString(),
-                    "/var/www/dist/kmpick/browser/assets/" + room.getRoom() + ".png"
-            );
+            generateWebsitePreview(room);
         }
+        this.messagingTemplate.convertAndSend("/topic/progress/" + room.getRoom() + "/" + playerId, result);
+    }
 
 
-        return getRoom(playerId, request.getRoomId());
+    private void generateWebsitePreview(Room room) {
+        Player player1 = room.getPlayer().get(0);
+        Player player2 = room.getPlayer().get(1);
+        List<Integer> g1 = new ArrayList<>(Arrays.asList(player1.getD1(), player1.getD2(), player1.getD3()));
+        List<Integer> g1bis = Arrays.asList(player1.getD1(), player1.getD2(), player1.getD3());
+        g1.remove(player2.getBan().intValue());
+        g1.add(g1bis.get(player2.getBan()));
+
+        List<Integer> g2 = new ArrayList<>(Arrays.asList(player2.getD1(), player2.getD2(), player2.getD3()));
+        List<Integer> g2bis = Arrays.asList(player2.getD1(), player2.getD2(), player2.getD3());
+        g2.remove(player1.getBan().intValue());
+        g2.add(g2bis.get(player1.getBan()));
+
+        pythonService.runPython(
+                player1.getName(), g1.get(0).toString(), g1.get(1).toString(), g1.get(2).toString(),
+                player2.getName(), g2.get(0).toString(), g2.get(1).toString(), g2.get(2).toString(),
+                "/var/www/dist/kmpick/browser/assets/" + room.getRoom() + ".png"
+        );
     }
 
     @PostMapping("/username")
     public void saveUsername(@RequestHeader("km_token") String playerId, @RequestBody NameUpdateRequest request) {
         Room room = roomRepository.findById(request.getRoomId()).get();
+        kmService.checkUsernameValidity(playerId, request.getName());
         room.setLastUpdated(LocalDateTime.now());
         Player player = room.getPlayer().stream().filter(p -> p.getUuid().equals(playerId)).findFirst().get();
+        Player player2 = room.getPlayer().stream().filter(p -> !p.getUuid().equals(playerId)).findFirst().get();
         player.setName(request.getName());
         playerRepository.save(player);
         roomRepository.save(room);
+
+
+        RoomDto result = getRoom(playerId, request.getRoomId());
+        RoomDto result2 = getRoom(player2.getUuid(), request.getRoomId());
+
+        // envoyer l'info du pseudo à l'autre joueur
+        this.messagingTemplate.convertAndSend("/topic/progress/" + room.getRoom() + "/" + player2.getUuid(), result2);
+
     }
+
 
     @Data
     @AllArgsConstructor

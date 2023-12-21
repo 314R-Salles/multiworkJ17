@@ -2,13 +2,14 @@ package com.psalles.multiworkJ17.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @ControllerAdvice
-public class RestExceptionHandler extends ResponseEntityExceptionHandler {
+public class RestExceptionHandler //extends ResponseEntityExceptionHandler
+{
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Object> handleUnauthorizedException(Exception ex, WebRequest request) {
@@ -28,6 +29,16 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Object> handleResourceNotFoundException(Exception ex, WebRequest request) {
         return new ResponseEntity<Object>(ex.getMessage(), null, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<Object> handleBusinnessException(Exception ex, WebRequest request) {
+        return new ResponseEntity<Object>(ex.getMessage(), null, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Object> handleMalformedException(Exception ex, WebRequest request) {
+        return new ResponseEntity<Object>(ex.getMessage(), null, HttpStatus.BAD_REQUEST);
     }
 
 }

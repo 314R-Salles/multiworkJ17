@@ -22,7 +22,7 @@ public class Player {
     private Long bddId;
 
     @ManyToOne
-    @JoinColumn(name="roomId")
+    @JoinColumn(name = "roomId")
     private Room roomId;
 
     @Column
@@ -37,6 +37,13 @@ public class Player {
     private Integer d3;
     @Column
     private Integer ban;
+
+    @Column
+    private Boolean validUsername = false;
+
+    public boolean isValidUsername() {
+        return validUsername != null ? validUsername : false;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -62,6 +69,7 @@ public class Player {
                 ", d2=" + d2 +
                 ", d3=" + d3 +
                 ", ban=" + ban +
+                ", valid=" + validUsername +
                 '}';
     }
 }
