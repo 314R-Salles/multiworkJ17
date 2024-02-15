@@ -2,27 +2,20 @@ package com.psalles.multiworkJ17.commons.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.psalles.multiworkJ17.exceptions.ForbiddenException;
-import com.psalles.multiworkJ17.exceptions.ResourceNotFoundException;
-import com.psalles.multiworkJ17.exceptions.TechnicalException;
-import com.psalles.multiworkJ17.exceptions.UnauthorizedException;
+import com.psalles.multiworkJ17.commons.exceptions.ForbiddenException;
+import com.psalles.multiworkJ17.commons.exceptions.ResourceNotFoundException;
+import com.psalles.multiworkJ17.commons.exceptions.TechnicalException;
+import com.psalles.multiworkJ17.commons.exceptions.UnauthorizedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.*;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.time.Duration;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.apache.logging.log4j.util.Strings.EMPTY;
 

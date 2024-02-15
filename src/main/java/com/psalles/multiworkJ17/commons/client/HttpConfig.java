@@ -11,6 +11,10 @@ import java.net.HttpURLConnection;
 import java.time.Duration;
 
 @Configuration
+/*
+Cette configuration sert pour gérer les appels à Ankama et charger ses pages web.
+Il y a un système de redirections et de token en arrivant sur le site qui empeche de faire des appels "simples"
+ */
 public class HttpConfig {
 
     private static class CustomClientHttpRequestFactory extends SimpleClientHttpRequestFactory {

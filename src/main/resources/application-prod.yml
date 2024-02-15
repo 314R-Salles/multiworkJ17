@@ -14,7 +14,7 @@ spring:
     init:
       mode: always
 
-crossOrigin: https://psalles.ovh, https://www.psalles.ovh
+crossOrigin: https://psalles.ovh, https://www.psalles.ovh, https://krosma.ga, https://www.krosma.ga
 
 server:
   ssl:
